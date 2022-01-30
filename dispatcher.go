@@ -60,25 +60,25 @@ func NewEventDispatcher[T comparable, E any](buffer int) *EventDispatcher[T, E] 
 }
 
 func (e *EventDispatcher[T, E]) DispatchEvent(eventType T, event E) {
+	e.dmu.Lock()
 	ch, ok := e.ch[eventType]
 	if !ok {
 		ch = make(chan E, e.buffer)
-		e.dmu.Lock()
 		e.ch[eventType] = ch
-		e.dmu.Unlock()
 		go e.startDispatch(eventType)
 	}
+	e.dmu.Unlock()
 	ch <- event
 }
 
 func (e *EventDispatcher[T, E]) AddEventListener(eventType T, fn listener[E]) {
+	e.lmu.Lock()
 	l, ok := e.listeners[eventType]
 	if !ok {
 		l = &list[E]{}
-		e.lmu.Lock()
 		e.listeners[eventType] = l
-		e.lmu.Unlock()
 	}
+	e.lmu.Unlock()
 	l.add(fn)
 }
 
